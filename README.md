@@ -1,0 +1,2 @@
+# gbswp
+GameBattleStats wordpress plugin
