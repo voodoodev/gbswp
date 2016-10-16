@@ -5,38 +5,62 @@ use GeorgeRujoiu\GameBattleStats\AbstractSingleton;
 
 class Activator extends AbstractSingleton
 {
-	private $tables = [
-		'platforms',
-		'ladders',
-		'tournaments',
-	];
+	private $charsetCollate;
+
+	private $prefixedTable;
 
 	public function activate()
 	{
-        # create the tables
-        $this->createTables();
-	}
-
-	private function createTables()
-	{
 		global $wpdb;
 
-        $charsetCollate = $wpdb->get_charset_collate();
+		# charset
+		$this->charsetCollate = $wpdb->get_charset_collate();
 
-        $sql = '';
+		# prefix the table name before adding to the db
+		$this->prefixedTable = $wpdb->prefix;
 
-		foreach ($this->tables as $table) {
-			# prefix the table name before adding to the db
-			$prefixedTable = $wpdb->prefix.$table;
+        require_once(ABSPATH.'wp-admin/includes/upgrade.php');
 
-            $sql .= 'CREATE TABLE '.$prefixedTable.' (
+        # create the tables
+        $this->platformsTable();
+		$this->teamsTable();
+		$this->laddersTable();
+		$this->tournamentsTable();
+	}
+
+	private function platformsTable()
+	{
+		dbDelta('CREATE TABLE '.$this->prefixedTable.'platforms (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 name tinytext NOT NULL,
                 PRIMARY KEY  (id)
-            ) '.$charsetCollate.';';
-		}
-        
-        require_once(ABSPATH.'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+            ) '.$this->charsetCollate.';');
+	}
+
+	private function teamsTable()
+	{
+		dbDelta('CREATE TABLE '.$this->prefixedTable.'teams (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                name tinytext NOT NULL,
+                PRIMARY KEY  (id)
+            ) '.$this->charsetCollate.';');
+	}
+
+	private function laddersTable()
+	{
+		dbDelta('CREATE TABLE '.$this->prefixedTable.'ladders (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                name tinytext NOT NULL,
+                PRIMARY KEY  (id)
+            ) '.$this->charsetCollate.';');
+	}
+
+	private function tournamentsTable()
+	{
+		dbDelta('CREATE TABLE '.$this->prefixedTable.'tournaments (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                name tinytext NOT NULL,
+                PRIMARY KEY  (id)
+            ) '.$this->charsetCollate.';');
 	}
 }
