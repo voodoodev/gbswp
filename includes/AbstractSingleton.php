@@ -3,11 +3,11 @@ namespace GeorgeRujoiu\GameBattleStats;
 
 abstract class AbstractSingleton
 {
-	protected static $instance;
+	protected static $instance ;
 
 	public static function getInstance()
 	{
-		if (null === static::$instance) {
+		if (null === static::$instance || !is_a(static::$instance, get_called_class())) {
 			static::$instance = new static();
 		}
 

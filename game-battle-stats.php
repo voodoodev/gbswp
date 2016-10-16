@@ -19,10 +19,6 @@ use GeorgeRujoiu\GameBattleStats\GameBattleStats;
 use GeorgeRujoiu\GameBattleStats\Activator;
 use GeorgeRujoiu\GameBattleStats\Deactivator;
 
-// if (is_admin()) {
-// 	require_once(dirname(__FILE__) . '/admin/game-battle-stats-admin.php');
-// }
-
 function activate_game_battle_stats()
 {
 	Activator::getInstance()
@@ -42,8 +38,8 @@ register_deactivation_hook(__FILE__, 'deactivate_game_battle_stats');
 
 function run_game_battle_stats()
 {
-	$gbs = new GameBattleStats();
-	// $gbs->run();
+	GameBattleStats::getInstance()
+		->run()
+	;
 }
-
-run_game_battle_stats();
+add_action('init', 'run_game_battle_stats');
