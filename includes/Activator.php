@@ -9,6 +9,10 @@ class Activator extends AbstractSingleton
 
 	private $prefixedTable;
 
+	/**
+	 * Runs when activating the plugin
+	 * @return $this
+	 */
 	public function activate()
 	{
 		global $wpdb;
@@ -26,6 +30,8 @@ class Activator extends AbstractSingleton
 		$this->teamsTable();
 		$this->laddersTable();
 		$this->tournamentsTable();
+
+		return $this;
 	}
 
 	private function platformsTable()
