@@ -2,7 +2,9 @@
 namespace GeorgeRujoiu\GameBattleStats;
 
 use GeorgeRujoiu\GameBattleStats\AbstractSingleton;
+use GeorgeRujoiu\GameBattleStats\Admin\Database;
 use GeorgeRujoiu\GameBattleStats\Admin\Platforms;
+use GeorgeRujoiu\GameBattleStats\Admin\Tournaments;
 
 class Admin extends AbstractSingleton
 {
@@ -16,36 +18,25 @@ class Admin extends AbstractSingleton
 
 	private $capability = 'manage_options';
 
-	private $prefixedTable;
-
 	public $platforms;
 
 	protected function __construct()
 	{
-		global $wpdb;
-
-		# prefix the table name before adding to the db
-		$this->prefixedTable = $wpdb->prefix;
-
-		$this->platforms = new Platforms([
-			'parent' => $this->mainSlug
-		]);
-
-		add_action('admin_menu', [$this, 'addMenu']);
-
-		add_action('admin_menu', [$this, 'addTournamentsMenu']);
-
-		add_action('admin_enqueue_scripts', [$this, 'loadScripts']);
-
-		if (isset($_POST['action'])) {
-			do_action('add_platform');
+		if (!current_user_can('manage_options')) {
+			return;
 		}
+
+		# load the platforms
+		$this->platforms = Platforms::getInstance();
+
+		# create the administration menus
+		add_action('admin_menu', [$this, 'buildMenus']);
+
+		# load extra scripts
+		add_action('admin_enqueue_scripts', [$this, 'loadScripts']);
 	}
 
-	/**
-	 * Add the main plugin admin page and menu
-	 */
-	public function addMenu()
+	public function buildMenus()
 	{
 		add_menu_page(
 			$this->pageTitle,
@@ -53,6 +44,47 @@ class Admin extends AbstractSingleton
 			$this->capability,
 			$this->mainSlug,
 			[$this, 'pageHtml']
+		);
+
+		$this->addSubMenu(
+			$this->mainSlug,
+			$this->platforms::PAGE_TITLE,
+			$this->platforms::MENU_TITLE,
+			$this->capability,
+			$this->platforms::MENU_SLUG,
+			$this->platforms,
+			'form'
+		);
+	}
+
+	/**
+	 * Create an admin sub menu page
+	 * 
+	 * @param $parentSlug string
+	 * @param $pageTitle string
+	 * @param $menuTitle string
+	 * @param $capability string
+	 * @param $menuSlug string
+	 * @param $callableFunction string
+	 * 
+	 * @return string | false
+	 */
+	private function addSubMenu(
+		$parentSlug,
+		$pageTitle,
+		$menuTitle,
+		$capability = 'manage_options',
+		$menuSlug,
+		$scope,
+		$callableFunction
+	) {
+		return add_submenu_page(
+			$parentSlug,
+			$pageTitle,
+			$menuTitle,
+			$capability,
+			$menuSlug,
+			[$scope, $callableFunction]
 		);
 	}
 
@@ -70,83 +102,36 @@ class Admin extends AbstractSingleton
 
 	public function pageHtml()
 	{
-		if (!current_user_can('manage_options')) {
-			return;
-		}
-
 		$pageTitle = esc_html(get_admin_page_title());
 
-		?>
-
+		echo <<<HTML
 		<div class="wrap">
-			<h1><?= $this->pageTitle ?></h1>
+			<h1>{$pageTitle}</h1>
 
 			<table class="table table-striped">
 				<tr>
 					<th>Platform</th>
 					<th>Actions</th>
 				</tr>
-				<?php
-				foreach($this->getData('platforms') as $platform):
+HTML;
+				foreach($this->platforms->get() as $platform):
+					$editUrl = get_admin_url(null, 'admin.php');
+					$removeUrl = get_admin_url(null, 'admin-post.php?action=remove_platform&id='.$platform->id);
 					echo <<<HTML
 						<tr><td>{$platform->name}</td>
-						  <td><a href="'.get_admin_url(null, 'admin.php?page=gbs&remove={$platform->id}" class="glyphicon glyphicon-remove"></a></td>
+						  <td>
+						  	<span onclick="location.href = '{$editUrl}'" class="glyphicon glyphicon-edit"></span>
+						  	<span  class="glyphicon glyphicon-remove"
+						  		onclick="return confirm('Are you sure you want to remove this platform?')
+						  		? location.href = '{$removeUrl}':'';"></span>
+						  </td>
 					</tr>
 HTML;
 				endforeach;
-				?>
+		echo <<<HTML
 			</table>
 		</div>
-
-		<?php
-	}
-
-	public function manipulatePlatform($action='add')
-	{
-		global $wpdb;
-
-		switch($action){
-			case 'delete':
-				$wpdb->delete($this->prefixedTable.'platforms', [
-					'id' => $_POST['platforms-id']
-				]);
-				break;
-			case 'add':
-				$wpdb->insert($this->prefixedTable.'platforms', [
-					'name' => $_POST['platform-name']
-				]);
-				break;
-		}
-
-		wp_redirect(get_admin_url(null, 'admin.php?page=gbs'));
-	}
-
-	public function tournamentsHtml()
-	{
-		if (!current_user_can('manage_options')) {
-			return;
-		}
-
-		$pageTitle = esc_html(get_admin_page_title());
-
-		?>
-
-		<div class="wrap">
-			<h1><?= $this->pageTitle ?></h1>
-
-			<table class="table table-striped">
-				<tr>
-					<th>Tournaments</th>
-				</tr>
-				<?php
-				foreach($this->getData('tournaments') as $tournament):
-					echo '<tr><td>'.$tournament->name.'</td></tr>';
-				endforeach;
-				?>
-			</table>
-		</div>
-
-		<?php
+HTML;
 	}
 
 	public function loadScripts()
@@ -158,25 +143,5 @@ HTML;
 			[],
 			''
 		);
-	}
-
-	public function getData($table, $limit = 'all')
-	{
-		global $wpdb;
-
-		switch ($limit) {
-			case 'all':
-				$result = $wpdb->get_results(
-					'SELECT id, name FROM '.$wpdb->prefix.$table
-				);
-			break;
-		}
-
-		if (is_null($result))
-		{
-			$result = [];
-		}
-
-		return $result;
 	}
 }

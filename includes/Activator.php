@@ -6,7 +6,7 @@ use GeorgeRujoiu\GameBattleStats\AbstractSingleton;
 class Activator extends AbstractSingleton
 {
 	private $charsetCollate;
-
+	
 	private $prefixedTable;
 
 	/**
